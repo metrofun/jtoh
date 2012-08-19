@@ -3,12 +3,23 @@ jtoh = (function(){
 
     var emptyTagNames = ['area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link', 'meta', 'param'];
 
+    function tokenizeElement(tagName, attrsTokens, innerHtmlTokens) {
+        var htmlTokens;
+
+        if (emptyTagNames.indexOf(tagName) !== -1) {
+            htmlTokens = ['<', tagName, '/>'];
+        } else {
+            htmlTokens = ['<', tagName, '>', '</', tagName, '>'];
+            htmlTokens.splice.apply(htmlTokens, [3, 0].concat(innerHtmlTokens));
+        }
+        htmlTokens.splice.apply(htmlTokens, [2, 0].concat(attrsTokens));
+        return htmlTokens;
+    }
+
     function precompile(json){
         var tagNameRaw = json.tagName,
-            // FIXME What if a function?
-            isEmptyTagName = emptyTagNames.indexOf(tagNameRaw) !== -1,
-            attributes = json.attributes,
-            htmlTokens, _htmlTokens, attrName, attrValRaw, attrsTokens = [];
+            attributes = json.attributes, innerHtmlTokens,
+            htmlTokens, attrName, attrValRaw, attrsTokens = [];
 
         if (Array.isArray(json)) {
             htmlTokens = json.map(function(json){
@@ -20,54 +31,42 @@ jtoh = (function(){
                 attributes['class'] = json.className;
             }
 
-            if (isEmptyTagName) {
-                htmlTokens = ['<', tagNameRaw, '/>'];
-                if (typeof tagNameRaw === 'function') {
-                    _htmlTokens = [function() {
-                        var tagName = htmlTokens.tagNameRaw.apply(this, arguments);
-                        htmlTokens[1] = tagName;
-                        return tagName? htmlTokens:[];
-                    }]
-                }
-            } else {
-                htmlTokens = ['<', tagNameRaw, '>', '</', tagNameRaw, '>'];
-                htmlTokens.splice.apply(htmlTokens, [3, 0].concat(precompile(json.innerHTML)));
-                if (typeof tagNameRaw === 'function') {
-                    _htmlTokens = [function() {
-                        var tagName = tagNameRaw.apply(this, arguments);
-                        htmlTokens[1] = tagName;
-                        htmlTokens[htmlTokens.length - 2] = tagName;
-                        return tagName? htmlTokens:[];
-                    }]
-                }
-
-            }
-
             for (attrName in attributes) {
-                var attrValRaw = attributes[attrName];
+                attrValRaw = attributes[attrName];
                 if (typeof attrValRaw === 'function') {
                     attrsTokens = attrsTokens.concat(function(attrValRaw) {
                         var attrVal = attrValRaw.apply(this, [].slice.call(arguments, 1));
                         // TODO escape double quotes
-                        return attrVal? [' ', attrName, '="', attrVal, '"']:[];
+                        return (typeof attrVal !== 'undefined') ? [' ', attrName, '="', attrVal, '"']:[];
                     }.bind(this, attrValRaw));
                 } else {
                     // TODO escape double quotes
                     attrsTokens = attrsTokens.concat([' ', attrName, '="', attrValRaw, '"']);
                 }
             }
-            htmlTokens.splice.apply(htmlTokens, [2, 0].concat(attrsTokens));
+
+            if (typeof tagNameRaw === 'function') {
+                innerHtmlTokens = precompile(json.innerHTML);
+                htmlTokens = [function(){
+                    var tagName = tagNameRaw.apply(this, arguments);
+                    return (typeof tagName !== 'undefined') ? tokenizeElement(tagName, attrsTokens, innerHtmlTokens) : [];
+                }];
+            } else {
+                htmlTokens = tokenizeElement(tagNameRaw, attrsTokens, precompile(json.innerHTML));
+            }
         } else {
             htmlTokens = [json];
         }
 
-        return _htmlTokens || htmlTokens;
+        return htmlTokens;
     };
     function compile(json) {
         var precompiled = precompile(json);
-        return function build(precompiled, data){
-            var compiled = precompiled.map(function(strRaw){
-                return (typeof strRaw === 'function')?build(strRaw.apply(this, data), data):strRaw;
+
+        return function process(precompiled){
+            var args = [].slice.call(arguments, 1),
+                compiled = precompiled.map(function(strOrFunc){
+                return (typeof strOrFunc === 'function')?process.apply(this, [strOrFunc.apply(this, args)].concat(args)):strOrFunc;
             });
             return compiled.join('');
         }.bind(this, precompiled);
@@ -78,10 +77,10 @@ jtoh = (function(){
     };
 })();
 console.log(jtoh.compile({
-    tagName: function(){return 'img'},
+    tagName: function(){return 'tr'},
     attributes: {
         zz: 123,
-        yy: function() {return 0;}
+        yy: function(a) {return a}
     },
     innerHTML: 'uuuuu'
-})());
+})('ssssss'));
