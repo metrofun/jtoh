@@ -36,11 +36,11 @@ jtoh = (function(){
                 if (typeof attrValRaw === 'function') {
                     attrsTokens = attrsTokens.concat(function(attrValRaw) {
                         var attrVal = attrValRaw.apply(this, [].slice.call(arguments, 1));
-                        // TODO escape double quotes
+                        attrVal = ('' + attrVal).replace(/"/g, '&quot;');
                         return (typeof attrVal !== 'undefined') ? [' ', attrName, '="', attrVal, '"']:[];
                     }.bind(this, attrValRaw));
                 } else {
-                    // TODO escape double quotes
+                    attrValRaw = ('' + attrValRaw).replace(/"/g, '&quot;');
                     attrsTokens = attrsTokens.concat([' ', attrName, '="', attrValRaw, '"']);
                 }
             }
@@ -80,7 +80,7 @@ console.log(jtoh.compile({
     tagName: function(){return 'tr'},
     attributes: {
         zz: 123,
-        yy: function(a) {return a}
+        yy: function(a) {return a + '"aaa"'}
     },
     innerHTML: 'uuuuu'
 })('ssssss'));
