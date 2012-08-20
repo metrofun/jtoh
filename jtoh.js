@@ -1,4 +1,4 @@
-jtoh = (function(){
+(function(root){
     "use strict";
 
     var emptyTagNames = ['area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link', 'meta', 'param'];
@@ -17,8 +17,7 @@ jtoh = (function(){
     }
 
     function precompile(json){
-        var tagNameRaw = json.tagName,
-            attributes = json.attributes, innerHtmlTokens,
+        var tagNameRaw, attributes, innerHtmlTokens,
             htmlTokens, attrName, attrValRaw, attrsTokens = [];
 
         if (Array.isArray(json)) {
@@ -26,6 +25,8 @@ jtoh = (function(){
                 return precompile(json);
             });
         } else if (typeof json === 'object') {
+            attributes = json.attributes;
+
             if (json.className) {
                 attributes = attributes || {};
                 attributes['class'] = json.className;
@@ -45,6 +46,7 @@ jtoh = (function(){
                 }
             }
 
+            tagNameRaw = json.tagName;
             if (typeof tagNameRaw === 'function') {
                 innerHtmlTokens = precompile(json.innerHTML);
                 htmlTokens = [function(){
@@ -54,12 +56,15 @@ jtoh = (function(){
             } else {
                 htmlTokens = tokenizeElement(tagNameRaw, attrsTokens, precompile(json.innerHTML));
             }
-        } else {
+        } else if (typeof json === 'string') {
             htmlTokens = [json];
+        } else {
+            htmlTokens = [];
         }
 
         return htmlTokens;
     };
+
     function compile(json) {
         var precompiled = precompile(json);
 
@@ -72,15 +77,24 @@ jtoh = (function(){
         }.bind(this, precompiled);
     }
 
-    return {
-        compile: compile
-    };
-})();
-console.log(jtoh.compile({
-    tagName: function(){return 'tr'},
-    attributes: {
-        zz: 123,
-        yy: function(a) {return a + '"aaa"'}
-    },
-    innerHTML: 'uuuuu'
-})('ssssss'));
+    function factory() {
+        return {
+            compile: compile
+        }
+    }
+
+    if (typeof define === 'function' && define.amd) {
+        define(factory);
+    } else {
+        root.jtoh = factory();
+    }
+})(typeof window === 'undefined'?global:window);
+
+// console.log(jtoh.compile({
+    // tagName: function(){return 'tr'},
+    // attributes: {
+        // zz: 123,
+        // yy: function(a) {return a + '"aaa"'}
+    // },
+    // innerHTML: 'uuuuu'
+// })('ssssss'));
