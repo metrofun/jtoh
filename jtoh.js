@@ -56,7 +56,7 @@
             } else {
                 htmlTokens = tokenizeElement(tagNameRaw, attrsTokens, precompile(json.innerHTML));
             }
-        } else if (typeof json === 'string') {
+        } else if (typeof json !== 'undefined') {
             htmlTokens = [json];
         } else {
             htmlTokens = [];
@@ -68,11 +68,16 @@
     function compile(json) {
         var precompiled = precompile(json);
 
-        return function process(precompiled){
-            var args = [].slice.call(arguments, 1),
-                compiled = precompiled.map(function(strOrFunc){
+        return function process(precompiledOrTemplate){
+            var args = [].slice.call(arguments, 1), compiled;
+            // If precompiled, then array of strings or functions
+            if (!Array.isArray(precompiledOrTemplate)) {
+                precompiledOrTemplate = precompile(precompiledOrTemplate);
+            }
+            compiled = precompiledOrTemplate.map(function(strOrFunc){
                 return (typeof strOrFunc === 'function')?process.apply(this, [strOrFunc.apply(this, args)].concat(args)):strOrFunc;
             });
+
             return compiled.join('');
         }.bind(this, precompiled);
     }
