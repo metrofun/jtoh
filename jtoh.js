@@ -50,7 +50,7 @@
                     attrsTokens = attrsTokens.concat(attrsTokensFactory.bind(this, attrName, attrValRaw));
                     // } else if (Array.isArray(attrValRaw)) {
                         // attrsTokens = attrsTokens.concat([' ', attrName, '="', attrValRaw, '"']);
-                } else {
+                } else if (typeof attrValRaw !== 'undefined') {
                     // attrValRaw = ('' + attrValRaw).replace(/"/g, '&quot;');
                     attrsTokens = attrsTokens.concat([' ', attrName, '="', attrValRaw, '"']);
                 }
