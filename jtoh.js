@@ -85,7 +85,10 @@
             precompiled = precompile(precompiledOrTemplate);
 
             compiled = precompiled.map(function (strOrFunc) {
-                return (typeof strOrFunc === 'function') ? process.apply(this, [strOrFunc.apply(this, args)].concat(args)):strOrFunc;
+                return (typeof strOrFunc === 'function') ? process.apply(
+                    this,
+                    [strOrFunc.apply(this, args)].concat(args)
+                ):strOrFunc;
             });
 
             return compiled.join('');
@@ -140,12 +143,3 @@
         root.jtoh = factory();
     }
 })(typeof window === 'undefined' ? global:window);
-
-// console.log(jtoh.compile({
-// tagName: function(){return 'tr'},
-// attributes: {
-// zz: 123,
-// yy: function(a) {return a + '"aaa"'}
-// },
-// innerHTML: 'uuuuu'
-// })('ssssss'));
